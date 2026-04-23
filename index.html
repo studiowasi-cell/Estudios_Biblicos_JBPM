@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Estudios Bíblicos JBPM</title>
+    <style>
+        /* =========================================
+           VARIABLES Y RESET
+           ========================================= */
+        :root {
+            --sage: #7a9e75;
+            --sage-light: #8aaa85;
+            --sage-pale: #c5d4c2;
+            --bg: #f0f3ee;
+            --dark: #1e2e1b;
+            --white: #ffffff;
+            --gray: #e0e4de;
+            --border: rgba(90,122,85,0.25);
+            --shadow: 0 2px 10px rgba(0,0,0,0.12);
+            --result-bg: #4a6b45;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html { height: 100%; }
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: var(--sage);
+            height: 100vh; height: 100dvh;
+            display: flex; flex-direction: column; overflow: hidden;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .hidden { display: none !important; }
+
+        /* =========================================
+           LOGIN
+           ========================================= */
+        #login-screen {
+            flex: 1; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 0; margin: 0;
+            background: #738F6B;
+            position: relative; overflow: hidden;
+        }
+        #login-screen svg {
+            width: 100%; height: 100%;
+            display: block;
+        }
+        .login-svg-wrap {
+            width: 100%; height: 100%;
+            position: relative;
+        }
+        #login-error {
+            position: absolute;
+            bottom: 6%; left: 50%; transform: translateX(-50%);
+            color: #ffcdd2; font-size: 0.82rem;
+            text-align: center; width: 80%;
+            pointer-events: none;
+        }
+
+        /* =========================================
+           APP PRINCIPAL
+           ========================================= */
+        #app-screen { display: flex; flex-direction: column; height: 100%; background: var(--sage); }
+
+        .app-header {
+            background: var(--result-bg); color: var(--white);
+            padding: 6px 14px;
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0; z-index: 10;
+        }
+        .app-header .hamburger { font-size: 1.5rem; cursor: pointer; padding: 4px; }
+        .app-header .title { font-size: 1rem; font-weight: bold; flex: 1; text-align: center; color: var(--white); letter-spacing: 0.3px; }
+        .app-header .star { font-size: 1.8rem; color: var(--white); }
+
+        /* CONTENEDOR CENTRAL */
+        .main-container {
+            flex: 1; background: var(--bg);
+            border-radius: 0;
+            margin-top: 0;
+            display: flex; flex-direction: column;
+            overflow: hidden; min-height: 0;
+        }
+
+        /* TOP BAR */
+        .top-bar {
+            padding: 6px 12px 6px;
+            background: var(--sage);
+            flex-shrink: 0;
+        }        .search-bar {
+            display: flex; background: var(--white); border-radius: 22px;
+            overflow: hidden; margin-bottom: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .search-bar input {
+            flex: 1; border: none; padding: 9px 12px; font-size: 0.93rem;
+            outline: none; color: var(--dark); font-family: inherit;
+            background: transparent;
+        }
+        .search-bar button {
+            background: transparent; border: none; padding: 0 12px;
+            border-left: 1px solid #eee; cursor: pointer; font-size: 1.1rem;
+        }
+        .dropdown-container label {
+            display: block; color: var(--white);
+            margin-bottom: 4px; font-weight: bold; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .custom-select {
+            background: var(--white); border-radius: 18px; padding: 7px 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.07);
+            position: relative;
+        }
+        .custom-select span { color: var(--dark); font-size: 0.9rem; font-weight: 500; font-family: inherit; }
+        .custom-select::after { content: '▼'; font-size: 0.65rem; color: #666; }
+
+        /* MODAL DE SELECCION DE LIBROS */
+        #book-select-modal {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45); z-index: 100;
+            display: flex; align-items: flex-end; justify-content: center;
+        }
+        .modal-sheet {
+            background: var(--bg); border-radius: 20px 20px 0 0;
+            width: 100%; max-height: 60vh; display: flex; flex-direction: column;
+            padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom));
+        }
+        .modal-title {
+            font-weight: bold; font-size: 1rem; color: var(--dark);
+            margin-bottom: 12px; text-align: center;
+        }
+        .modal-books-list { overflow-y: auto; flex: 1; }
+        .modal-book-item {
+            display: flex; align-items: center; padding: 11px 10px;
+            border: 1px solid #ddd; margin-bottom: 7px; border-radius: 10px;
+            background: var(--white); cursor: pointer; gap: 10px; font-size: 0.9rem;
+            font-family: inherit;
+        }
+        .modal-book-item.checked { border-color: var(--sage); background: #e8ede6; }
+        .modal-book-item .chk {
+            width: 20px; height: 20px; border: 2px solid var(--sage); border-radius: 4px;
+            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; color: var(--sage);
+        }
+        .modal-close {
+            background: var(--sage); color: var(--white); border: none;
+            padding: 10px; border-radius: 12px; cursor: pointer;
+            font-family: inherit; font-weight: bold; margin-top: 10px; font-size: 0.9rem;
+        }
+
+        /* PESTAÑAS SUPERIORES */
+        .tabs-spacer { height: 0px; background: var(--sage); }
+        .search-bar { margin-bottom: 6px; }
+        .dropdown-container { margin-bottom: 0; }
+        .tabs-folder-container {
+            display: flex; gap: 2px; background: var(--sage);
+            padding: 0 4px; align-items: flex-end;
+        }
+        .folder-tab {
+            flex: 1; padding: 9px 6px 9px; text-align: center;
+            font-weight: bold; font-size: 0.85rem; cursor: pointer;
+            border-radius: 12px 12px 0 0; border: 2px solid var(--sage); border-bottom: none;
+            transition: background 0.15s, color 0.15s;
+            font-family: inherit;
+        }
+        .folder-tab.inactive { background: var(--sage-pale); color: var(--dark); }
+        .folder-tab.active {
+            background: var(--result-bg); color: var(--white); z-index: 2;
+            padding-bottom: 11px;
+        }
+
+        /* HEADER RESULTADOS */
+        .result-header {
+            background: var(--result-bg); color: var(--white);
+            padding: 6px 14px; font-size: 0.93rem; text-align: center; font-weight: bold;
+            flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            z-index: 4; border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+
+        /* SCROLL AREA */
+        .scrollable-content {
+            flex: 1; overflow-y: auto; padding: 10px 12px;
+            background: var(--bg); -webkit-overflow-scrolling: touch;
+            user-select: text; min-height: 0;
+        }
+
+        /* BLOQUES DE CITA */
+        .citation-block {
+            margin-bottom: 12px; border-bottom: 1px solid #d5dcd3;
+            padding-bottom: 10px; position: relative;
+        }
+        .citation-block:last-child { border-bottom: none; }
+        .citation-ref { color: var(--sage); font-size: 1.05rem; font-weight: bold; display: block; margin-bottom: 3px; }
+        .citation-sub { color: #666; font-size: 0.78rem; display: block; margin-bottom: 5px; font-style: italic; }
+        .citation-actions { float: right; font-size: 0.8rem; margin-bottom: 4px; }
+        .citation-actions a {
+            color: var(--sage); text-decoration: underline; cursor: pointer;
+            margin-left: 8px; font-family: inherit;
+        }
+        .citation-text { color: var(--dark); line-height: 1.5; font-size: 0.9rem; clear: both; }
+        .read-more {
+            color: var(--sage); text-decoration: underline; display: block;
+            margin-top: 5px; text-align: right; cursor: pointer; font-size: 0.82rem;
+            font-family: inherit;
+        }
+
+        /* ESTILOS DE MARCADO */
+        .hl-yellow  { background: #FFEB3B; padding: 1px 0; }
+        .hl-orange  { background: #FFB74D; padding: 1px 0; }
+        .hl-blue    { background: #81D4FA; padding: 1px 0; }
+        .hl-green   { background: #A5D6A7; padding: 1px 0; }
+        .hl-pink    { background: #F48FB1; padding: 1px 0; }
+        .hl-purple  { background: #CE93D8; padding: 1px 0; }
+        .hl-peach   { background: #FFCCBC; padding: 1px 0; }
+        .ul-active  { border-bottom: 2px solid #E91E63; }
+
+        /* TOOLBAR ESTUDIO / NOTAS */
+        .book-tabs-container { background: var(--sage); padding: 0 4px; flex-shrink: 0; }
+        .book-tabs { display: flex; gap: 2px; align-items: flex-start; }
+        .book-tab {
+            flex: 1; padding: 9px 6px 11px; text-align: center;
+            font-weight: bold; font-size: 0.8rem; cursor: pointer;
+            border-radius: 0 0 12px 12px; border: 2px solid var(--sage); border-top: none;
+            font-family: inherit;
+        }
+        .book-tab.inactive { background: var(--sage-pale); color: var(--dark); }
+        .book-tab.active {
+            background: var(--result-bg); color: var(--white);
+            border-top: 2px solid var(--result-bg);
+        }
+
+        .bottom-toolbar {
+            background: var(--sage);
+            padding: 4px 8px 3px;
+            flex-shrink: 0; z-index: 20;
+        }
+        .toolbar-buttons { display: flex; justify-content: space-between; margin-bottom: 3px; gap: 3px; }
+        .tb-btn {
+            background: #dde5db; border: none; padding: 5px 3px; border-radius: 6px;
+            font-size: 0.68rem; font-weight: bold; color: var(--dark);
+            cursor: pointer; flex: 1; font-family: inherit;
+            transition: background 0.1s;
+        }
+        .tb-btn:active { background: #c5d2c3; }
+        .tb-btn.danger { background: #f8d0d0; color: #b00020; }
+
+        .color-palette { display: flex; justify-content: space-between; margin-bottom: 3px; padding: 0 2px; gap: 3px; }
+        .color-swatch {
+            flex: 1; height: 26px; border-radius: 5px; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.3);
+            transition: transform 0.1s, border-color 0.1s;
+        }
+        .color-swatch:active { transform: scale(0.88); }
+        .color-swatch.selected { border-color: var(--white); box-shadow: 0 0 6px rgba(255,255,255,0.7); }
+
+        .toggle-options {
+            display: flex; justify-content: space-around;
+            color: var(--white); font-size: 0.85rem; padding: 1px 6px;
+        }
+        .toggle-opt { cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 4px; }
+        .toggle-opt:active { background: rgba(255,255,255,0.12); }
+        .check-circle {
+            width: 18px; height: 18px; border: 2px solid var(--white); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: background 0.15s;
+        }
+        .check-circle.checked { background: var(--white); }
+        .check-circle.checked::after { content: '✓'; font-size: 11px; color: var(--sage); font-weight: bold; }
+
+        /* =========================================
+           PANTALLA CONFIGURACIÓN
+           ========================================= */
+        #config-screen {
+            position: fixed; inset: 0;
+            background: var(--sage); z-index: 50;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 16px;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+            overflow: hidden;
+        }
+        .config-card {
+            background: var(--bg); width: 100%; max-width: 400px;
+            border-radius: 18px; padding: 14px; margin-top: 14px;
+            flex: 1; display: flex; flex-direction: column; overflow: hidden;
+        }
+        .config-header {
+            background: var(--sage); color: var(--white); padding: 9px;
+            text-align: center; border-radius: 10px; margin-bottom: 14px;
+            font-weight: bold; font-size: 1rem;
+        }
+        .config-tabs { display: flex; gap: 7px; margin-bottom: 10px; }
+        .config-tab {
+            flex: 1; padding: 9px; border: none; background: #dde2db; color: #555;
+            font-weight: bold; font-size: 0.85rem; border-radius: 8px; cursor: pointer;
+            font-family: inherit; transition: background 0.15s, color 0.15s;
+        }
+        .config-tab.active { background: var(--sage); color: var(--white); }
+        .config-section { display: none; flex: 1; overflow-y: auto; }
+        .config-section.active { display: flex; flex-direction: column; }
+        .section-label { font-weight: bold; margin-bottom: 8px; color: var(--dark); font-size: 0.9rem; }
+        .book-list { margin-bottom: 10px; }
+        .book-item {
+            display: flex; align-items: center; padding: 11px 12px;
+            border: 1px solid #ddd; margin-bottom: 7px; border-radius: 10px;
+            cursor: pointer; background: var(--white); font-size: 0.9rem;
+            font-family: inherit;
+        }
+        .book-item.selected { border-color: var(--sage); background: #e8ede6; }
+        .radio-circle {
+            width: 18px; height: 18px; border: 2px solid var(--sage); border-radius: 50%;
+            margin-right: 12px; position: relative; flex-shrink: 0;
+        }
+        .book-item.selected .radio-circle::after {
+            content: ''; position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 10px; height: 10px; background: var(--sage); border-radius: 50%;
+        }
+        .config-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: auto; padding-top: 10px; }
+        .config-btn {
+            background: var(--sage); color: var(--white); border: none; padding: 9px 18px;
+            border-radius: 14px; font-size: 0.9rem; cursor: pointer; font-family: inherit;
+        }
+        .config-btn.danger { background: #c62828; }
+        .admin-input-group { display: flex; gap: 7px; margin-bottom: 10px; }
+        .admin-input {
+            flex: 1; padding: 9px 12px; border: 1px solid #ddd; border-radius: 18px;
+            font-size: 0.9rem; outline: none; font-family: inherit;
+        }
+        .admin-input:focus { border-color: var(--sage); }
+        .admin-list { flex: 1; overflow-y: auto; }
+        .admin-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 9px 12px; background: var(--white); border: 1px solid #eee;
+            margin-bottom: 6px; border-radius: 10px; font-size: 0.85rem; color: var(--dark);
+        }
+        .delete-admin-btn {
+            background: #f44336; color: var(--white); border: none;
+            width: 24px; height: 24px; border-radius: 50%; font-size: 0.8rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .logout-btn {
+            background: var(--white); color: var(--sage); border: none;
+            padding: 12px 40px; border-radius: 18px; font-size: 0.95rem;
+            cursor: pointer; margin-top: 14px; font-weight: bold; font-family: inherit;
+        }
+
+        /* ESTUDIO: BOTÓN PEGAR */
+        .paste-btn {
+            display: block; background: var(--sage); color: var(--white);
+            border: none; padding: 10px 20px; border-radius: 14px;
+            font-size: 0.9rem; cursor: pointer; margin: 10px auto 0;
+            font-family: inherit;
+        }
+
+        /* NOTAS: TEXTAREA */
+        .notes-textarea {
+            width: 100%; flex: 1; border: none; outline: none; resize: none;
+            font-size: 0.93rem; line-height: 1.6; color: var(--dark);
+            background: transparent; font-family: inherit; font-style: italic;
+            padding: 4px;
+        }
+
+        /* BARRA DE MARCADO — SIEMPRE VISIBLE (los 3 módulos) */
+        .markup-bar {
+            background: var(--sage);
+            padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+            flex-shrink: 0; z-index: 20;
+        }
+
+        /* FEEDBACK VISUAL */
+        .copied-flash { animation: flashGreen 0.8s ease; }
+        @keyframes flashGreen { 0% { color: var(--sage); } 50% { color: #2e7d32; } 100% { color: var(--sage); } }
+    </style>
+</head>
+<body>
+
+<!-- ==========================================
+     PANTALLA 1: LOGIN
+     ========================================== -->
+<div id="login-screen">
+    <div class="login-svg-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1510 3362" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;">
+            <defs>
+                <style>
+                    .lstr0{stroke:#B4C4BD;stroke-width:5.59;stroke-opacity:0.51}
+                    .lstr1{stroke:#B4C4BD;stroke-width:5.59}
+                    .lf0{fill:#738F6B}
+                    .lf1{fill:#99B495}
+                    .lf2{fill:#738F6B;fill-opacity:0.51}
+                    .lf3{fill:#3B4F43}
+                    .lf4{fill:#3B4F45}
+                    .lf5{fill:#E7EDE6}
+                    .lfnt0{font-weight:bold;font-size:148px;font-family:Arial,sans-serif}
+                    .lfnt1{font-style:italic;font-weight:bold;font-size:66px;font-family:'Times New Roman',Georgia,serif}
+                    .lfnt2{font-size:54px;font-family:Arial,sans-serif}
+                </style>
+            </defs>
+            <!-- Fondo verde oscuro -->
+            <rect class="lf0" y="3" width="1510" height="3356"/>
+            <!-- Rect grande claro -->
+            <rect class="lf1" x="143" y="175" width="1224" height="3012"/>
+            <!-- Rect cortado arriba semitransparente -->
+            <polygon class="lf2 lstr0" points="354,3 1156,3 1156,347 354,347"/>
+            <!-- Rect oscuro arriba con borde -->
+            <rect class="lf0 lstr1" x="354" y="554" width="802" height="794"/>
+            <!-- Rect cortado abajo semitransparente -->
+            <polygon class="lf2 lstr0" points="354,3359 1156,3359 1156,3015 354,3015"/>
+            <!-- Rect oscuro abajo con borde -->
+            <rect class="lf0 lstr1" x="354" y="2014" width="802" height="794"/>
+            <!-- Estrella de David -->
+            <path class="lf3" d="M901 856l-27 47 -1 2 -2 3 -19 32 -1 3 -2 2 -40 71 34 0 23 -39 3 -5 19 -33 1 -2 2 -3 62 -108 0 0 -123 0 18 30 53 0zm52 198l0 0 -61 -107 -18 30 24 41 3 6 -186 0 17 30 221 0zm-344 -30l27 -47 2 -3 1 -2 19 -33 1 -2 2 -3 40 -70 -34 0 -23 39 -1 2 -2 3 -18 32 -2 3 -1 2 -63 109 123 0 -17 -30 -54 0zm145 -251l1 -2 28 48 1 3 2 2 19 33 3 5 40 70 18 -30 -23 -39 -3 -5 -19 -33 -1 -2 -2 -3 -63 -109 -62 107 35 0 26 -45zm-118 129l-27 -46 186 0 -17 -30 -221 0 62 106 17 -30zm122 201l-3 6 -28 -48 -1 -3 -2 -2 -18 -33 -2 -3 -1 -2 -41 -71 -17 30 22 40 2 2 1 3 19 32 1 3 2 2 63 110 62 -108 -34 0 -25 42z"/>
+            <!-- Textos -->
+            <text x="440" y="1543" class="lf4 lfnt0">Estudios</text>
+            <text x="465" y="1709" class="lf4 lfnt0">Bíblicos</text>
+            <text x="755" y="1878" class="lf4 lfnt1" text-anchor="middle">Dr. José Benjamín Pérez Matos</text>
+            <!-- Botón Google centrado en rect inferior -->
+            <rect class="lf5" x="430" y="2355" width="650" height="115" rx="57"/>
+            <image x="450" y="2367" width="90" height="90" href="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"/>
+            <text x="560" y="2428" class="lf3 lfnt2">Ingresar con Google</text>
+            <!-- Zona clickeable del botón -->
+            <rect x="430" y="2355" width="650" height="115" rx="57" fill="transparent" style="cursor:pointer;" onclick="loginWithGoogle()"/>
+        </svg>
+        <p id="login-error"></p>
+    </div>
+</div>
+
+<!-- ==========================================
+     PANTALLA 2: APP PRINCIPAL
+     ========================================== -->
+<div id="app-screen" class="hidden">
+
+    <div class="app-header">
+        <span class="hamburger" onclick="showConfig()">☰</span>
+        <span class="title">Estudios Bíblicos JBPM</span>
+        <span class="star">✡</span>
+    </div>
+
+    <div class="main-container" style="position:relative;">
+
+        <!-- Modal selección libros -->
+        <div id="book-select-modal" class="hidden" onclick="closeBookModal(event)">
+            <div class="modal-sheet">
+                <div class="modal-title">Seleccionar libros para buscar</div>
+                <div class="modal-books-list" id="modal-books-list"></div>
+                <button class="modal-close" onclick="applyBookSelection()">Aplicar</button>
+            </div>
+        </div>
+
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar tema o referencia..." id="search-input">
+                <button onclick="performSearch()" aria-label="Buscar">🔍</button>
+            </div>
+            <div class="dropdown-container">
+                <label id="dropdown-label">LIBROS:</label>
+                <div class="custom-select" onclick="openBookModal()">
+                    <span id="dropdown-value">Todos los libros</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs-spacer"></div>
+
+        <!-- PESTAÑAS SUPERIORES -->
+        <div class="tabs-folder-container" id="main-tabs">
+            <div class="folder-tab active" data-tab="citas" onclick="switchTab('citas', this)">Citas</div>
+            <div class="folder-tab inactive" data-tab="estudio" onclick="switchTab('estudio', this)">Estudios</div>
+            <div class="folder-tab inactive" data-tab="notas" onclick="switchTab('notas', this)">Notas</div>
+        </div>
+
+        <!-- HEADER RESULTADOS -->
+        <div class="result-header">
+            <span id="result-title">Resultados de búsqueda</span>
+        </div>
+
+        <!-- CONTENIDO SCROLLEABLE -->
+        <div class="scrollable-content" id="scroll-area">
+
+            <!-- VISTA CITAS -->
+            <div id="view-citas">
+                <div id="search-results-container">
+                    <p style="color:#888; text-align:center; font-style:italic; margin-top:20px;">
+                        Ingrese un tema y presione buscar.
+                    </p>
+                </div>
+            </div>
+
+            <!-- VISTA ESTUDIO -->
+            <div id="view-estudio" style="display:none;">
+                <div id="study-items-container"></div>
+                <button class="paste-btn" id="paste-btn" onclick="pasteToStudy()">📋 Pegar cita</button>
+            </div>
+
+            <!-- VISTA NOTAS -->
+            <div id="view-notas" style="display:none;">
+                <textarea class="notes-textarea" id="notes-textarea"
+                    placeholder="Escribe tus observaciones y conclusiones aquí..."
+                    oninput="saveNoteDraft()"></textarea>
+            </div>
+
+        </div>
+
+        <!-- SECCIÓN INFERIOR VARIABLE -->
+
+        <!-- 1. PESTAÑAS DE LIBROS (solo CITAS) -->
+        <div class="book-tabs-container" id="book-tabs-container">
+            <div class="book-tabs" id="book-tabs"></div>
+        </div>
+
+        <!-- 2. BOTONES ESTUDIO / NOTAS (oculto en Citas) -->
+        <div class="bottom-toolbar hidden" id="bottom-toolbar">
+            <!-- Botones Estudio -->
+            <div class="toolbar-buttons" id="study-toolbar-buttons">
+                <button class="tb-btn" onclick="newStudy()">Nuevo</button>
+                <button class="tb-btn" onclick="openStudy()">Abrir</button>
+                <button class="tb-btn" onclick="saveStudy()">Guardar</button>
+                <button class="tb-btn danger" onclick="saveStudyAs()">Guardar X</button>
+                <button class="tb-btn" onclick="exportStudy()">Exportar</button>
+                <button class="tb-btn" onclick="closeStudy()">Cerrar</button>
+            </div>
+            <!-- Botones Notas -->
+            <div class="toolbar-buttons hidden" id="notes-toolbar-buttons">
+                <button class="tb-btn" onclick="newNote()">Nueva</button>
+                <button class="tb-btn" onclick="openNote()">Abrir</button>
+                <button class="tb-btn" onclick="saveNote()">Guardar</button>
+                <button class="tb-btn danger" onclick="deleteNote()">Eliminar</button>
+                <button class="tb-btn" onclick="exportNote()">Exportar</button>
+            </div>
+        </div>
+
+        <!-- 3. PALETA DE COLORES Y TOGGLES — SIEMPRE VISIBLE (los 3 módulos) -->
+        <div class="markup-bar" id="markup-bar">
+            <div class="color-palette">
+                <div class="color-swatch" style="background:#FFEB3B;" onclick="selectColor(this,'hl-yellow')" title="Amarillo"></div>
+                <div class="color-swatch" style="background:#FFB74D;" onclick="selectColor(this,'hl-orange')" title="Naranja"></div>
+                <div class="color-swatch" style="background:#E91E63;" onclick="selectColor(this,'hl-pink')" title="Rosa"></div>
+                <div class="color-swatch" style="background:#FFCCBC;" onclick="selectColor(this,'hl-peach')" title="Melocotón"></div>
+                <div class="color-swatch" style="background:#81D4FA;" onclick="selectColor(this,'hl-blue')" title="Azul"></div>
+                <div class="color-swatch" style="background:#A5D6A7;" onclick="selectColor(this,'hl-green')" title="Verde"></div>
+                <div class="color-swatch" style="background:#CE93D8;" onclick="selectColor(this,'hl-purple')" title="Violeta"></div>
+            </div>
+            <div class="toggle-options">
+                <div class="toggle-opt" onclick="toggleHighlight()">
+                    <div class="check-circle checked" id="chk-highlight"></div>
+                    <span>Resaltado</span>
+                </div>
+                <div class="toggle-opt" onclick="toggleUnderline()">
+                    <div class="check-circle" id="chk-underline"></div>
+                    <span>Subrayado</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ==========================================
+     PANTALLA 3: CONFIGURACIÓN
+     ========================================== -->
+<div id="config-screen" class="hidden">
+    <div style="display:flex; justify-content:space-between; align-items:center; width:100%; max-width:400px;">
+        <span style="font-size:1.5rem; color:var(--white); cursor:pointer;" onclick="hideConfig()">✕</span>
+        <span style="color:var(--white); font-weight:bold; font-size:1rem;">Configuración</span>
+        <span style="width:24px;"></span>
+    </div>
+    <div class="config-card">
+        <div class="config-header">Configuración del Sistema</div>
+
+        <div class="config-tabs" id="config-tabs-container">
+            <button class="config-tab active" onclick="switchConfigTab('libros')">📚 Libros</button>
+            <button class="config-tab" id="admins-tab-btn" onclick="switchConfigTab('admins')">👥 Administradores</button>
+        </div>
+
+        <!-- LIBROS -->
+        <div id="config-libros" class="config-section active">
+            <div class="section-label">Biblioteca cargada:</div>
+            <div class="book-list" id="book-list-ui"></div>
+            <div class="config-actions">
+                <input type="file" id="pdf-input" style="display:none" accept="application/pdf,.txt,.epub" onchange="handleFileSelect(event)">
+                <button class="config-btn" onclick="document.getElementById('pdf-input').click()">+ Subir libro</button>
+                <button class="config-btn danger" onclick="deleteSelectedBook()">Eliminar</button>
+                <button class="config-btn" onclick="hideConfig()">Salir</button>
+            </div>
+        </div>
+
+        <!-- ADMINISTRADORES (solo visible para superadmin) -->
+        <div id="config-admins" class="config-section">
+            <div class="section-label">Correos con acceso:</div>
+            <div class="admin-input-group">
+                <input type="email" id="new-admin-email" placeholder="correo@gmail.com" class="admin-input">
+                <button class="config-btn" style="padding:9px 14px;" onclick="addAdmin()">Agregar</button>
+            </div>
+            <div class="admin-list" id="admin-list-ui"></div>
+            <div style="margin-top:10px;">
+                <button class="config-btn" onclick="hideConfig()" style="width:100%;">Salir</button>
+            </div>
+        </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+</div>
+
+<!-- ==========================================
+     SUPABASE SDK
+     ========================================== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ==========================================
+     LÓGICA JAVASCRIPT
+     ========================================== -->
+<script>
+// =============================================
+// CONFIGURACIÓN SUPABASE
+// =============================================
+const SUPABASE_URL = 'https://vtubqkdrgsodzrfktyyo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_YFZTrwEW28RBBUY4befW2A_hARwp662';
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const SUPER_ADMIN = 'studiowasi@gmail.com';
+
+// =============================================
+// ESTADO GLOBAL
+// =============================================
+let currentUser = null;
+let currentTab = 'citas';
+let activeHlClass = 'hl-yellow';
+let highlightActive = true;
+let underlineActive = false;
+
+let books = JSON.parse(localStorage.getItem('jbpm_books') || 'null') || [
+    { id: 'b1', name: 'La Biblia', active: true, selected: true },
+    { id: 'b2', name: 'Libro de Citas WMB', active: false, selected: true }
+];
+let authorizedAdmins = [SUPER_ADMIN];
+
+// Estudios y notas simples en localStorage
+let studies = JSON.parse(localStorage.getItem('jbpm_studies') || '[]');
+let notes = JSON.parse(localStorage.getItem('jbpm_notes') || '[]');
+let currentStudy = null;
+let currentStudyItems = [];
+let currentNote = null;
+let clipboard = null; // Cita copiada para pegar en estudio
+
+function saveState() {
+    localStorage.setItem('jbpm_books', JSON.stringify(books));
+
+    localStorage.setItem('jbpm_studies', JSON.stringify(studies));
+    localStorage.setItem('jbpm_notes', JSON.stringify(notes));
+}
+
+// =============================================
+// AUTH — SUPABASE + GOOGLE
+// =============================================
+async function loginWithGoogle() {
+    const errEl = document.getElementById('login-error');
+    errEl.innerText = 'Conectando...';
+    try {
+        const { error } = await sbClient.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: 'https://jbpm-estudios.studiowasi.workers.dev',
+                queryParams: { hd: 'gmail.com' }
+            }
+        });
+        if (error) errEl.innerText = '⛔ ' + error.message;
+    } catch(e) {
+        errEl.innerText = '⛔ Error al conectar con Google.';
+    }
+}
+
+async function logout() {
+    await sbClient.auth.signOut();
+    currentUser = null;
+    hideConfig();
+    document.getElementById('app-screen').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('login-error').innerText = '';
+}
+
+async function initApp(user) {
+    currentUser = user;
+    // Cargar lista de administradores desde Supabase
+    await loadAuthorizedUsers();
+
+    const email = user.email;
+    const isAdmin = authorizedAdmins.includes(email);
+    const isSuperAdmin = (email === SUPER_ADMIN);
+
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-screen').classList.remove('hidden');
+
+    // Mostrar hamburger solo a admins y superadmin
+    const hamburger = document.querySelector('.hamburger');
+    hamburger.style.display = isAdmin ? '' : 'none';
+
+    // Mostrar pestaña Administradores solo al superadmin
+    const adminsTab = document.getElementById('admins-tab-btn');
+    adminsTab.style.display = isSuperAdmin ? '' : 'none';
+
+    switchTab('citas', document.querySelector('.folder-tab[data-tab="citas"]'));
+    renderBooks();
+    if (isAdmin) renderAdmins();
+    updateDropdownLabel();
+}
+
+// Detectar sesión activa al cargar la página (tras redirect de Google)
+sbClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        return;
+    }
+    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && session.user) {
+        const email = session.user.email;
+        if (!email.endsWith('@gmail.com')) {
+            sbClient.auth.signOut();
+            document.getElementById('login-error').innerText = '⛔ Solo se permiten cuentas Gmail';
+            return;
+        }
+        initApp(session.user);
+    }
+});
+
+// Verificar sesión existente al cargar
+async function checkExistingSession() {
+    await loadAuthorizedUsers();
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (session && session.user) {
+        const email = session.user.email;
+        if (email.endsWith('@gmail.com')) {
+            initApp(session.user);
+        }
+    }
+}
+checkExistingSession();
+
+// =============================================
+// NAVEGACIÓN DE MÓDULOS
+// =============================================
+function switchTab(tabName, el) {
+    currentTab = tabName;
+
+    // Actualizar pestañas superiores
+    document.querySelectorAll('.folder-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tabName);
+        t.classList.toggle('inactive', t.dataset.tab !== tabName);
+    });
+
+    const bookTabs = document.getElementById('book-tabs-container');
+    const toolbar = document.getElementById('bottom-toolbar');
+    const studyBtns = document.getElementById('study-toolbar-buttons');
+    const notesBtns = document.getElementById('notes-toolbar-buttons');
+    const dropLabel = document.getElementById('dropdown-label');
+    const resTitle = document.getElementById('result-title');
+
+    // Vistas
+    document.getElementById('view-citas').style.display = tabName === 'citas' ? '' : 'none';
+    document.getElementById('view-estudio').style.display = tabName === 'estudio' ? '' : 'none';
+    document.getElementById('view-notas').style.display = tabName === 'notas' ? '' : 'none';
+
+    if (tabName === 'citas') {
+        bookTabs.classList.remove('hidden');
+        toolbar.classList.add('hidden');
+        dropLabel.textContent = 'LIBROS:';
+        resTitle.textContent = 'Resultados de búsqueda';
+        updateDropdownLabel();
+    } else if (tabName === 'estudio') {
+        bookTabs.classList.add('hidden');
+        toolbar.classList.remove('hidden');
+        studyBtns.classList.remove('hidden');
+        notesBtns.classList.add('hidden');
+        dropLabel.textContent = 'ESTUDIOS:';
+        resTitle.textContent = currentStudy ? currentStudy.name : 'Nuevo Estudio';
+        renderDropdownStudies();
+    } else if (tabName === 'notas') {
+        bookTabs.classList.add('hidden');
+        toolbar.classList.remove('hidden');
+        studyBtns.classList.add('hidden');
+        notesBtns.classList.remove('hidden');
+        dropLabel.textContent = 'NOTAS:';
+        resTitle.textContent = 'Mis Notas';
+        renderDropdownNotes();
+    }
+}
+
+// =============================================
+// DROPDOWN DE LIBROS (SELECCIÓN MÚLTIPLE)
+// =============================================
+function openBookModal() {
+    if (currentTab === 'estudio') { openStudyFromDropdown(); return; }
+    if (currentTab === 'notas') { openNoteFromDropdown(); return; }
+
+    const list = document.getElementById('modal-books-list');
+    list.innerHTML = '';
+    books.forEach(book => {
+        const item = document.createElement('div');
+        item.className = `modal-book-item${book.selected ? ' checked' : ''}`;
+        item.dataset.id = book.id;
+        item.onclick = () => {
+            book.selected = !book.selected;
+            item.classList.toggle('checked', book.selected);
+            item.querySelector('.chk').textContent = book.selected ? '✓' : '';
+        };
+        item.innerHTML = `<div class="chk">${book.selected ? '✓' : ''}</div>${book.name}`;
+        list.appendChild(item);
+    });
+    document.getElementById('book-select-modal').classList.remove('hidden');
+}
+
+function closeBookModal(e) {
+    if (e.target.id === 'book-select-modal') applyBookSelection();
+}
+
+function applyBookSelection() {
+    document.getElementById('book-select-modal').classList.add('hidden');
+    saveState();
+    updateDropdownLabel();
+    renderBooks();
+}
+
+function updateDropdownLabel() {
+    const selected = books.filter(b => b.selected);
+    const label = selected.length === books.length ? 'Todos los libros'
+        : selected.length === 0 ? 'Ninguno seleccionado'
+        : selected.map(b => b.name).join(', ');
+    document.getElementById('dropdown-value').textContent = label;
+}
+
+// =============================================
+// BÚSQUEDA
+// =============================================
+function performSearch() {
+    const query = document.getElementById('search-input').value.trim();
+    if (!query) return;
+
+    const resTitle = document.getElementById('result-title');
+    const container = document.getElementById('search-results-container');
+
+    resTitle.textContent = `Buscando: "${query}"...`;
+    container.innerHTML = '<p style="color:#888;text-align:center;margin-top:20px;">⏳ Buscando...</p>';
+
+    // Cambiar a pestaña citas si no está
+    if (currentTab !== 'citas') switchTab('citas', null);
+
+    // Actualiza pestañas de libros según selección
+    renderBooks();
+
+    // SIMULACIÓN: reemplazar con llamada real a Algolia/Firestore
+    setTimeout(() => {
+        const selectedBooks = books.filter(b => b.selected);
+        if (selectedBooks.length === 0) {
+            resTitle.textContent = 'Selecciona al menos un libro';
+            container.innerHTML = '<p style="color:#888;text-align:center;">No hay libros seleccionados.</p>';
+            return;
+        }
+        resTitle.textContent = `"${query}"`;
+        container.innerHTML = renderDemoResults(query, selectedBooks);
+        // Actualizar pestañas de libros con resultados
+        renderBooks(true);
+    }, 400);
+}
+
+function renderDemoResults(query, selectedBooks) {
+    // Demo: mostrar ejemplo estático para ilustrar la interfaz
+    return `
+        <div class="citation-block">
+            <span class="citation-ref">Mateo 17:1-8</span>
+            <span class="citation-sub">La Biblia · Nuevo Testamento</span>
+            <div class="citation-actions">
+                <a onclick="copyToCitations(this, 'Mateo 17:1-8', 'Jesús tomó a Pedro, a Jacobo y a Juan su hermano, y los llevó aparte a un monte alto; y se transfiguró delante de ellos.')">Copiar</a>
+            </div>
+            <div class="citation-text">
+                <b>1</b> Seis días después, Jesús tomó a Pedro, a Jacobo y a Juan su hermano, y los llevó aparte a un monte alto;
+                <b>2</b> y se transfiguró delante de ellos, y resplandeció su rostro como el sol, y sus vestidos se volvieron blancos como la luz.
+            </div>
+            <span class="read-more" onclick="toggleReadMore(this)">Leer más ▼</span>
+            <div class="read-more-text" style="display:none;">
+                <div class="citation-text" style="margin-top:6px;color:#555;">
+                    <b>3</b> Y he aquí les aparecieron Moisés y Elías, hablando con él. <b>4</b> Entonces Pedro dijo a Jesús: Señor, bueno es para nosotros estar aquí...
+                </div>
+            </div>
+        </div>
+        <div class="citation-block">
+            <span class="citation-ref">Marcos 9:2-8</span>
+            <span class="citation-sub">La Biblia · Nuevo Testamento</span>
+            <div class="citation-actions">
+                <a onclick="copyToCitations(this, 'Marcos 9:2-8', 'Y se transfiguró delante de ellos, y sus vestidos se volvieron resplandecientes.')">Copiar</a>
+            </div>
+            <div class="citation-text">
+                <b>2</b> Seis días después, Jesús tomó a Pedro, a Jacobo y a Juan, y los llevó aparte solos a un monte alto; y se transfiguró delante de ellos.
+                <span class="hl-yellow"><b>3</b> Y sus vestidos se volvieron resplandecientes, muy blancos, como la nieve.</span>
+            </div>
+            <span class="read-more" onclick="toggleReadMore(this)">Leer más ▼</span>
+            <div class="read-more-text" style="display:none;">
+                <div class="citation-text" style="margin-top:6px;color:#555;"><b>4</b> Y les apareció Elías con Moisés, que hablaban con Jesús...</div>
+            </div>
+        </div>`;
+}
+
+function toggleReadMore(el) {
+    const next = el.nextElementSibling;
+    if (next && next.classList.contains('read-more-text')) {
+        const open = next.style.display === '' || next.style.display === 'block';
+        next.style.display = open ? 'none' : 'block';
+        el.textContent = open ? 'Leer más ▼' : 'Leer menos ▲';
+    }
+}
+
+// =============================================
+// COPIAR / PEGAR EN ESTUDIO
+// =============================================
+function copyToCitations(el, ref, text) {
+    clipboard = { ref, text };
+    el.textContent = '✓ Copiado';
+    el.style.color = '#2e7d32';
+    setTimeout(() => { el.textContent = 'Copiar'; el.style.color = ''; }, 1200);
+}
+
+function pasteToStudy() {
+    if (!clipboard) {
+        alert('Primero copia una cita desde el módulo Citas.');
+        return;
+    }
+    const item = { id: Date.now(), ref: clipboard.ref, text: clipboard.text, expanded: false };
+    currentStudyItems.push(item);
+    renderStudyItems();
+}
+
+function renderStudyItems() {
+    const container = document.getElementById('study-items-container');
+    container.innerHTML = '';
+    currentStudyItems.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'citation-block';
+        div.innerHTML = `
+            <span class="citation-ref">${item.ref}</span>
+            <div class="citation-actions">
+                <a onclick="removeStudyItem(${item.id})">Eliminar</a>
+            </div>
+            <div class="citation-text" id="si-text-${item.id}" style="cursor:pointer;" onclick="expandStudyItem(${item.id})">
+                ${item.expanded ? item.text : item.ref}
+            </div>
+            ${item.expanded ? `<span class="read-more" onclick="collapseStudyItem(${item.id})">Ocultar ▲</span>` : ''}
+        `;
+        container.appendChild(div);
+    });
+}
+
+function expandStudyItem(id) {
+    const item = currentStudyItems.find(i => i.id === id);
+    if (item) { item.expanded = true; renderStudyItems(); }
+}
+function collapseStudyItem(id) {
+    const item = currentStudyItems.find(i => i.id === id);
+    if (item) { item.expanded = false; renderStudyItems(); }
+}
+function removeStudyItem(id) {
+    currentStudyItems = currentStudyItems.filter(i => i.id !== id);
+    renderStudyItems();
+}
+
+// =============================================
+// ESTUDIO CRUD
+// =============================================
+function newStudy() {
+    if (currentStudyItems.length > 0 && !confirm('¿Descartar el estudio actual sin guardar?')) return;
+    currentStudy = null;
+    currentStudyItems = [];
+    renderStudyItems();
+    document.getElementById('result-title').textContent = 'Nuevo Estudio';
+}
+
+function saveStudy() {
+    if (currentStudyItems.length === 0) { alert('El estudio está vacío.'); return; }
+    const name = currentStudy ? currentStudy.name : prompt('Nombre del estudio:');
+    if (!name) return;
+    if (currentStudy) {
+        currentStudy.items = [...currentStudyItems];
+        currentStudy.date = new Date().toISOString();
+        const idx = studies.findIndex(s => s.id === currentStudy.id);
+        if (idx > -1) studies[idx] = currentStudy;
+    } else {
+        currentStudy = { id: Date.now(), name, date: new Date().toISOString(), items: [...currentStudyItems] };
+        studies.unshift(currentStudy);
+    }
+    saveState();
+    document.getElementById('result-title').textContent = currentStudy.name;
+    alert('✅ Estudio guardado.');
+}
+
+function saveStudyAs() {
+    const name = prompt('Guardar como:');
+    if (!name) return;
+    const copy = { id: Date.now(), name, date: new Date().toISOString(), items: [...currentStudyItems] };
+    studies.unshift(copy);
+    currentStudy = copy;
+    saveState();
+    document.getElementById('result-title').textContent = name;
+    alert('✅ Guardado como: ' + name);
+}
+
+function openStudy() {
+    if (studies.length === 0) { alert('No hay estudios guardados.'); return; }
+    const names = studies.map((s, i) => `${i + 1}. ${s.name} (${s.date.slice(0,10)})`).join('\n');
+    const idx = parseInt(prompt(`Selecciona número de estudio:\n${names}`)) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= studies.length) return;
+    if (currentStudyItems.length > 0 && !confirm('¿Descartar estudio actual?')) return;
+    currentStudy = studies[idx];
+    currentStudyItems = [...currentStudy.items];
+    renderStudyItems();
+    document.getElementById('result-title').textContent = currentStudy.name;
+}
+
+function openStudyFromDropdown() { openStudy(); }
+
+function exportStudy() {
+    if (currentStudyItems.length === 0) { alert('Nada que exportar.'); return; }
+    const text = currentStudyItems.map(i => `${i.ref}\n${i.text}`).join('\n\n---\n\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${currentStudy ? currentStudy.name : 'estudio'}.txt`;
+    a.click();
+}
+
+function closeStudy() {
+    if (currentStudyItems.length > 0 && !confirm('¿Cerrar sin guardar?')) return;
+    currentStudy = null;
+    currentStudyItems = [];
+    renderStudyItems();
+    document.getElementById('result-title').textContent = 'Mi Estudio';
+}
+
+// =============================================
+// NOTAS CRUD
+// =============================================
+function saveNoteDraft() { /* auto-save en memoria */ }
+
+function newNote() {
+    if (!confirm('¿Crear nueva nota?')) return;
+    currentNote = null;
+    document.getElementById('notes-textarea').value = '';
+    document.getElementById('result-title').textContent = 'Nueva Nota - ' + new Date().toLocaleDateString('es');
+}
+
+function saveNote() {
+    const text = document.getElementById('notes-textarea').value.trim();
+    if (!text) return;
+    if (currentNote) {
+        currentNote.text = text; currentNote.date = new Date().toISOString();
+        const idx = notes.findIndex(n => n.id === currentNote.id);
+        if (idx > -1) notes[idx] = currentNote;
+    } else {
+        currentNote = { id: Date.now(), date: new Date().toISOString(), text };
+        notes.unshift(currentNote);
+    }
+    saveState();
+    document.getElementById('result-title').textContent = new Date(currentNote.date).toLocaleDateString('es');
+    alert('✅ Nota guardada.');
+}
+
+function openNote() {
+    if (notes.length === 0) { alert('No hay notas guardadas.'); return; }
+    const list = notes.map((n, i) => `${i+1}. ${n.date.slice(0,10)} - ${n.text.slice(0,40)}...`).join('\n');
+    const idx = parseInt(prompt(`Selecciona nota:\n${list}`)) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= notes.length) return;
+    currentNote = notes[idx];
+    document.getElementById('notes-textarea').value = currentNote.text;
+    document.getElementById('result-title').textContent = new Date(currentNote.date).toLocaleDateString('es');
+}
+
+function openNoteFromDropdown() { openNote(); }
+
+function deleteNote() {
+    if (!currentNote || !confirm('¿Eliminar esta nota?')) return;
+    notes = notes.filter(n => n.id !== currentNote.id);
+    currentNote = null;
+    document.getElementById('notes-textarea').value = '';
+    saveState();
+    alert('Nota eliminada.');
+}
+
+function exportNote() {
+    const text = document.getElementById('notes-textarea').value;
+    if (!text) return;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `nota_${new Date().toLocaleDateString('es').replace(/\//g,'-')}.txt`;
+    a.click();
+}
+
+function renderDropdownStudies() {
+    const val = studies.length > 0 ? studies[0].name : 'Sin estudios';
+    document.getElementById('dropdown-value').textContent = val;
+}
+
+function renderDropdownNotes() {
+    const val = notes.length > 0 ? notes[0].date.slice(0,10) : 'Sin notas';
+    document.getElementById('dropdown-value').textContent = val;
+}
+
+// =============================================
+// LIBROS (PESTAÑAS INFERIORES EN CITAS)
+// =============================================
+function renderBooks(withResults) {
+    const container = document.getElementById('book-tabs');
+    container.innerHTML = '';
+    const selected = books.filter(b => b.selected);
+    selected.forEach((book, i) => {
+        const div = document.createElement('div');
+        div.className = `book-tab ${i === 0 ? 'active' : 'inactive'}`;
+        div.textContent = book.name;
+        div.onclick = () => {
+            container.querySelectorAll('.book-tab').forEach(t => { t.classList.remove('active'); t.classList.add('inactive'); });
+            div.classList.add('active'); div.classList.remove('inactive');
+        };
+        container.appendChild(div);
+    });
+}
+
+// =============================================
+// CONFIGURACIÓN
+// =============================================
+function showConfig() {
+    document.getElementById('config-screen').classList.remove('hidden');
+    renderAdmins(); renderBookList();
+    // Ocultar tab admins si no es superadmin
+    const adminsTab = document.getElementById('admins-tab-btn');
+    if (currentUser) adminsTab.style.display = (currentUser.email === SUPER_ADMIN) ? '' : 'none';
+}
+function hideConfig() { document.getElementById('config-screen').classList.add('hidden'); }
+
+function switchConfigTab(tab) {
+    document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.config-section').forEach(s => s.classList.remove('active'));
+    if (tab === 'libros') {
+        document.querySelectorAll('.config-tab')[0].classList.add('active');
+        document.getElementById('config-libros').classList.add('active');
+    } else {
+        document.getElementById('admins-tab-btn').classList.add('active');
+        document.getElementById('config-admins').classList.add('active');
+    }
+}
+
+function renderBookList() {
+    const list = document.getElementById('book-list-ui');
+    list.innerHTML = '';
+    books.forEach(book => {
+        const div = document.createElement('div');
+        div.className = `book-item ${book.active ? 'selected' : ''}`;
+        div.onclick = () => {
+            books.forEach(b => b.active = (b.id === book.id));
+            renderBookList();
+        };
+        div.innerHTML = `<div class="radio-circle"></div>${book.name}`;
+        list.appendChild(div);
+    });
+}
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const name = file.name.replace(/\.(pdf|txt|epub)$/i, '');
+    const newBook = { id: 'b' + Date.now(), name, active: false, selected: true };
+    books.push(newBook);
+    saveState();
+    renderBookList();
+    updateDropdownLabel();
+    alert(`📄 "${name}" agregado a la biblioteca.`);
+    event.target.value = '';
+}
+
+function deleteSelectedBook() {
+    const active = books.find(b => b.active);
+    if (!active) { alert('Selecciona un libro primero.'); return; }
+    if (!confirm(`¿Eliminar "${active.name}"?`)) return;
+    books = books.filter(b => b.id !== active.id);
+    if (books.length > 0) books[0].active = true;
+    saveState();
+    renderBookList();
+    renderBooks();
+    updateDropdownLabel();
+}
+
+// =============================================
+// ADMINISTRADORES
+// =============================================
+function renderAdmins() {
+    const list = document.getElementById('admin-list-ui');
+    list.innerHTML = '';
+    authorizedAdmins.forEach(email => {
+        const item = document.createElement('div');
+        item.className = 'admin-item';
+        const isSuperAdmin = (email === SUPER_ADMIN);
+        item.innerHTML = `
+            <span>📧 ${email}</span>
+            ${isSuperAdmin
+                ? '<span style="font-size:0.78rem;color:#888;">(Principal)</span>'
+                : `<button class="delete-admin-btn" onclick="removeAdmin('${email}')">✕</button>`}
+        `;
+        list.appendChild(item);
+    });
+}
+
+// Cargar admins desde Supabase
+async function loadAuthorizedUsers() {
+    try {
+        const { data, error } = await sbClient.from('authorized_users').select('email');
+        if (error) throw error;
+        authorizedAdmins = data.map(row => row.email);
+        if (!authorizedAdmins.includes(SUPER_ADMIN)) authorizedAdmins.unshift(SUPER_ADMIN);
+    } catch(e) {
+        console.warn('Error cargando usuarios:', e);
+        authorizedAdmins = [SUPER_ADMIN];
+    }
+}
+
+async function addAdmin() {
+    const input = document.getElementById('new-admin-email');
+    const email = input.value.trim().toLowerCase();
+    if (!email || !email.includes('@') || !email.endsWith('@gmail.com')) {
+        alert('Ingresa un correo Gmail válido.'); return;
+    }
+    if (authorizedAdmins.includes(email)) { alert('Este correo ya está autorizado.'); return; }
+    try {
+        const { error } = await sbClient.from('authorized_users').insert([{ email }]);
+        if (error) throw error;
+        authorizedAdmins.push(email);
+        input.value = '';
+        renderAdmins();
+        alert('✅ Usuario autorizado.');
+    } catch(e) {
+        alert('Error al agregar: ' + e.message);
+    }
+}
+
+async function removeAdmin(email) {
+    if (!confirm(`¿Revocar acceso a ${email}?`)) return;
+    try {
+        const { error } = await sbClient.from('authorized_users').delete().eq('email', email);
+        if (error) throw error;
+        authorizedAdmins = authorizedAdmins.filter(e => e !== email);
+        renderAdmins();
+    } catch(e) {
+        alert('Error al eliminar: ' + e.message);
+    }
+}
+
+// =============================================
+// MARCADO DE TEXTO (RESALTADO / SUBRAYADO)
+// =============================================
+function selectColor(el, hlClass) {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+    activeHlClass = hlClass;
+}
+
+function toggleHighlight() {
+    highlightActive = !highlightActive;
+    document.getElementById('chk-highlight').classList.toggle('checked', highlightActive);
+}
+
+function toggleUnderline() {
+    underlineActive = !underlineActive;
+    document.getElementById('chk-underline').classList.toggle('checked', underlineActive);
+}
+
+// Aplica marcado a texto seleccionado en el área de scroll
+document.addEventListener('mouseup', applyMarkup);
+document.addEventListener('touchend', applyMarkup);
+
+function applyMarkup(e) {
+    if (!highlightActive && !underlineActive) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    // Solo marcar dentro del área de scroll
+    const scrollArea = document.getElementById('scroll-area');
+    if (!scrollArea.contains(range.commonAncestorContainer)) return;
+
+    const span = document.createElement('span');
+    if (highlightActive) span.classList.add(activeHlClass);
+    if (underlineActive) span.classList.add('ul-active');
+
+    try {
+        range.surroundContents(span);
+    } catch(ex) {
+        // surroundContents falla si la selección cruza nodos; ignorar silenciosamente
+    }
+    sel.removeAllRanges();
+}
+
+// =============================================
+// INICIALIZACIÓN
+// =============================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Enter para buscar
+    document.getElementById('search-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') performSearch();
+    });
+    // Seleccionar primer color por defecto
+    document.querySelector('.color-swatch').classList.add('selected');
+    // Iniciar renderizado de libros
+    renderBooks();
+});
+</script>
+</body>
+</html>
